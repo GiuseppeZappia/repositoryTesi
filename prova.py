@@ -171,6 +171,30 @@ class Zoom_Advanced(ttk.Frame):
             polig=self.canvas.create_polygon(self.poly_punti, outline="red", tags="poligono",fill="")
             self.punti_poligoni.append(self.poly_punti)
             self.coord_disegni.append(("poligono", x_1,y_1,x_2, y_2,polig, self.imscale))
+            #vertici rettangolo che circoscrive poligono, lo disegno sulla canva solo per visualizzarlo ora, poi lo tolgo
+            #inoltre posso fare una chiamata a funzione per calcolare queste coordinate rendendo il codice piu leggibile
+            min_x=self.poly_punti[0][0]
+            max_x=self.poly_punti[0][0]
+            min_y=self.poly_punti[0][1]
+            max_y=self.poly_punti[0][1]
+            for (cord_x,cord_y) in self.poly_punti:
+                if cord_x<min_x:
+                    min_x=cord_x
+                elif cord_x>max_x:
+                    max_x=cord_x
+                if cord_y<min_y:
+                    min_y=cord_y
+                elif cord_y>max_y:
+                    max_y=cord_y       
+            #rett = self.canvas.create_rectangle(min_x, min_y, max_x,max_y, outline="red", tags="rettangolo")
+            print(self.canvas.coords(polig))
+            punti_poligono=self.canvas.coords(polig)
+            
+            
+            
+            #se servono qui ho stampe dei vertici del mio rettangolo
+            #print(min_x,min_y)
+            #print(max_x,max_y)
             print("----------------------------COORDINATE ULTIMO POLIGONO DISEGNATO-----------------------------")
             print(self.punti_poligoni[-1])
             print("-------------------------------LISTA COORD DI TUTTI I POLIGONI DISEGNATI------------------------")
@@ -233,11 +257,90 @@ class Zoom_Advanced(ttk.Frame):
                         mask[int(y2):int(y1), int(x2):int(x1)] = 1
             else:
                 for poligono in self.punti_poligoni:
-                    for punti in poligono:
-                        mask[punti[1],punti[0]]=1
+                    for coppia in range(len(poligono)-1):#voglio escludere ultima coppia perche va accoppiata col primo elemento
+                        self.calcola_punti_retta(poligono[coppia],poligono[coppia+1],mask)
+                    self.calcola_punti_retta(poligono[0],poligono[-1],mask)
+                    lista_interni=self.points_inside_polygon(poligono)
+                    for coppia in lista_interni:
+                        mask[coppia[1],coppia[0]]=1
         mask_path = filedialog.asksaveasfilename(defaultextension=".png", filetypes=[("PNG files", "*.png")])
         if mask_path:
             Image.fromarray(mask * 255).save(mask_path)
+
+    def is_point_inside_polygon(self,x, y, poly):
+        """
+        Verifica se il punto (x, y) è all'interno del poligono poly.
+        poly è una lista di tuple rappresentanti i vertici del poligono.
+        Restituisce True se il punto è all'interno del poligono, altrimenti False.
+        """
+        n = len(poly)
+        inside = False
+        p1x, p1y = poly[0]
+        for i in range(n + 1):
+            p2x, p2y = poly[i % n]
+            if y > min(p1y, p2y):
+                if y <= max(p1y, p2y):
+                    if x <= max(p1x, p2x):
+                        if p1y != p2y:
+                            xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+                        if p1x == p2x or x <= xinters:
+                            inside = not inside
+            p1x, p1y = p2x, p2y
+        return inside
+
+    def points_inside_polygon(self,poly):
+        """
+        Restituisce una lista di tuple rappresentanti i punti interni al poligono poly.
+        poly è una lista di tuple rappresentanti i vertici del poligono.
+        """
+        min_x = min(poly, key=lambda p: p[0])[0]
+        max_x = max(poly, key=lambda p: p[0])[0]
+        min_y = min(poly, key=lambda p: p[1])[1]
+        max_y = max(poly, key=lambda p: p[1])[1]
+        points = []
+        for y in range(min_y, max_y + 1):
+            for x in range(min_x, max_x + 1):
+                if self.is_point_inside_polygon(x, y, poly):
+                    points.append((x, y))
+        return points
+
+
+    def calcola_punti_retta(self,p1,p2,mask):
+        x1,y1=p1
+        x2,y2=p2
+        ''' if(x2==x1):#retta verticale
+            for y in range(min(y1,y2),max(y1,y2)+1):
+                mask[y,x1]=1
+        elif(y2==y1):#retta orizzontale
+            for x in range(min(x1,x2),max(x1,x2)+1):
+                mask[y2,x]=1
+        else:#retta obliqua
+            for y in range(y_min,y_max+1):
+                for x in range(x_min,x_max+1):
+                    if(((x-x1)/(x2-x1))==((y-y1)/(y2-y1))):
+                        mask[y,x]=1
+        mask[y1,x1]=1'''
+        points = []
+        dx = abs(x2 - x1)
+        dy = abs(y2 - y1)
+        sx = 1 if x1 < x2 else -1
+        sy = 1 if y1 < y2 else -1
+        err = dx - dy
+        while True:
+            points.append((x1, y1))
+            if x1 == x2 and y1 == y2:
+                break
+            e2 = 2 * err
+            if e2 > -dy:
+                err -= dy
+                x1 += sx
+            if e2 < dx:
+                err += dx
+                y1 += sy
+        for punti in points:
+            mask[punti[1],punti[0]]=1
+            
+
 
     def undo(self,event=None):
         if len(self.coord_disegni)==0:
@@ -314,7 +417,8 @@ class Zoom_Advanced(ttk.Frame):
             self.canvas.imagetk = imagetk  # keep an extra reference to prevent garbage-collection
         self.master.focus_force()#metto in primo piano la finestra
 
-percorso_foto=filedialog.askopenfilename()
+#percorso_foto=filedialog.askopenfilename()
 root = tk.Tk()
-app = Zoom_Advanced(root, path=percorso_foto)
+#app = Zoom_Advanced(root, path=percorso_foto)
+app = Zoom_Advanced(root, "vite.jpg")
 root.mainloop()
