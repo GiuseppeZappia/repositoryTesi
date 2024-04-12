@@ -91,6 +91,7 @@ class Zoom_Advanced(ttk.Frame):
         self.container = self.canvas.create_rectangle(0, 0, self.width, self.height, width=0)
         self.master.geometry(f"{self.width}x{self.height}")
         self.show_image()
+        print("sto facendo una prova per la commit di github ")
 
     def is_inside_image(self, x, y):
         bbox = self.canvas.bbox(self.container)  # Ottengo il bounding box dell'immagine
