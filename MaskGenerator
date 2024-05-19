@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 import numpy as np
 from PIL import ImageDraw
 
-class Zoom_Advanced(ttk.Frame):
+class Mask_Generator(ttk.Frame):
     def __init__(self, mainframe, path):
         ''' Inizializzo il frame principale '''
         ttk.Frame.__init__(self, master=mainframe)
@@ -380,5 +380,5 @@ class Zoom_Advanced(ttk.Frame):
 
 percorso_foto=filedialog.askopenfilename()
 root = tk.Tk()
-app = Zoom_Advanced(root, path=percorso_foto)
+app = Mask_Generator(root, path=percorso_foto)
 root.mainloop()
